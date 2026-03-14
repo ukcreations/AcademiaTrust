@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - RPC_URL=http://localhost:8545
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - ADMIN_ADDRESS=${ADMIN_ADDRESS}
+      - TESSERACT_CMD=/usr/bin/tesseract
