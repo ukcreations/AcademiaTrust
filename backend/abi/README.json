@@ -1,0 +1,8 @@
+{
+    "_readme": "This file is a placeholder. After compiling your Hardhat contract, copy the ABI here.",
+    "_steps": [
+        "1. cd contracts && npm install",
+        "2. npx hardhat compile",
+        "3. Copy: contracts/artifacts/contracts/AcademiaTrust.sol/AcademiaTrust.json → backend/abi/AcademiaTrust.json"
+    ]
+}
