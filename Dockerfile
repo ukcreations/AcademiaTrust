@@ -36,5 +36,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Expose ports
 EXPOSE 80 8000
 
-# Start both services
-CMD ["sh", "-c", "nginx && uvicorn main:app --host 0.0.0.0 --port 8000"]
+# Start both services with proper script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+CMD ["/start.sh"]
