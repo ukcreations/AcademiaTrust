@@ -1,5 +1,5 @@
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
 
 [deploy]
 healthcheckPath = "/"
@@ -8,32 +8,12 @@ restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
 [[services]]
-name = "frontend"
-source = "frontend"
-builder = "nixpacks"
-
-[services.build]
-buildCommand = "npm run build"
-watchPatterns = ["frontend/src/**", "frontend/package.json"]
+name = "web"
+builder = "dockerfile"
 
 [services.deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
-
-[[services]]
-name = "backend"
-source = "backend"
-builder = "nixpacks"
-
-[services.build]
-buildCommand = "pip install -r requirements.txt"
-watchPatterns = ["backend/**/*.py", "backend/requirements.txt"]
-
-[services.deploy]
-healthcheckPath = "/docs"
-healthcheckTimeout = 100
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10
-port = 8000
+port = 80
