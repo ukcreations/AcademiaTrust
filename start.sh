@@ -1,10 +1,17 @@
 #!/bin/sh
 
-# Start nginx in background
-nginx &
+# Create a simple index.html for health check
+echo '<html><body><h1>AcademiaTrust is running!</h1></body></html>' > /var/www/html/index.html
 
-# Start FastAPI in background
+# Start nginx
+nginx -g "daemon off;" &
+
+# Wait a moment for nginx to start
+sleep 2
+
+# Start FastAPI
+cd /app
 uvicorn main:app --host 0.0.0.0 --port 8000 &
 
-# Wait for any process to exit
-wait
+# Keep the container running
+tail -f /dev/null
