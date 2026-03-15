@@ -11,6 +11,7 @@ from services.blockchain_service import (
     verify_certificate_on_chain,
     get_certificate_details,
 )
+from services.ocr_service import extract_text_from_bytes, validate_certificate_format
 
 router = APIRouter()
 
@@ -54,6 +55,13 @@ class LookupResponse(BaseModel):
     file_hash:       Optional[str]
     issued_at:       Optional[str]
     issued_by:       Optional[str]
+
+
+class OCRValidationResponse(BaseModel):
+    is_valid_format: bool
+    message: str
+    detected_type: Optional[str]  # "certificate" or "mark_sheet"
+    confidence: Optional[str]
 
 
 # ── Routes ──────────────────────────────────────────────────────────────────
@@ -101,6 +109,27 @@ async def verify_certificate(
     file_bytes = await file.read()
     submitted_hash = hashlib.sha256(file_bytes).hexdigest()
 
+    # First validate certificate format using OCR
+    try:
+        ocr_text = await extract_text_from_bytes(file_bytes, file.content_type)
+        is_valid_format, validation_message = validate_certificate_format(ocr_text)
+        
+        if not is_valid_format:
+            return VerifyResponse(
+                verified=False,
+                roll_number=roll_number,
+                submitted_hash=submitted_hash,
+                student_name=None,
+                university_name=None,
+                degree=None,
+                issued_at=None,
+                issued_by=None,
+                message=f"❌ Invalid document format: {validation_message}",
+            )
+    except Exception as e:
+        # If OCR fails, proceed with blockchain verification but note the issue
+        pass
+
     try:
         verified, details = await verify_certificate_on_chain(
             roll_number=roll_number,
@@ -131,7 +160,7 @@ async def verify_certificate(
             degree=None,
             issued_at=None,
             issued_by=None,
-            message="❌ TAMPERED or FAKE: Hash does not match or certificate not found on blockchain.",
+            message="❌ Certificate NOT FOUND or TAMPERED: No matching record found on blockchain.",
         )
 
 
@@ -166,3 +195,47 @@ async def lookup_certificate(roll_number: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lookup error: {str(e)}")
+
+
+@router.post("/validate-format", response_model=OCRValidationResponse, summary="Validate certificate/mark sheet format")
+async def validate_document_format(file: UploadFile = File(...)):
+    """
+    Validates if the uploaded document is a valid certificate or mark sheet.
+    Uses OCR to extract text and validate format.
+    """
+    file_bytes = await file.read()
+    
+    try:
+        ocr_text = await extract_text_from_bytes(file_bytes, file.content_type)
+        is_valid_format, validation_message = validate_certificate_format(ocr_text)
+        
+        # Determine document type and confidence
+        detected_type = None
+        confidence = None
+        
+        if is_valid_format:
+            text_lower = ocr_text.lower()
+            certificate_keywords = ["certificate", "degree", "bachelor", "master", "phd", "diploma"]
+            mark_sheet_keywords = ["mark sheet", "marksheet", "grade card", "transcript", "results"]
+            
+            if any(keyword in text_lower for keyword in certificate_keywords):
+                detected_type = "certificate"
+            elif any(keyword in text_lower for keyword in mark_sheet_keywords):
+                detected_type = "mark_sheet"
+            
+            confidence = "high" if detected_type else "medium"
+        
+        return OCRValidationResponse(
+            is_valid_format=is_valid_format,
+            message=validation_message,
+            detected_type=detected_type,
+            confidence=confidence
+        )
+        
+    except Exception as e:
+        return OCRValidationResponse(
+            is_valid_format=False,
+            message=f"OCR processing failed: {str(e)}",
+            detected_type=None,
+            confidence=None
+        )

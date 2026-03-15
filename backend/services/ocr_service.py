@@ -95,3 +95,61 @@ def parse_roll_number(text: str) -> Tuple[Optional[str], str]:
             return match.group(1).strip().upper(), confidence
 
     return None, "low"
+
+
+def validate_certificate_format(text: str) -> Tuple[bool, str]:
+    """
+    Validate if the OCR text contains certificate/mark sheet keywords and format.
+    
+    Returns:
+        (is_valid, message)
+    """
+    # Certificate and mark sheet keywords
+    certificate_keywords = [
+        "certificate", "degree", "bachelor", "master", "phd", "diploma",
+        "engineering", "technology", "science", "arts", "commerce",
+        "university", "college", "institute", "graduated", "completed",
+        "academic", "qualification", "award", "conferred"
+    ]
+    
+    mark_sheet_keywords = [
+        "mark sheet", "marksheet", "statement of marks", "grade card",
+        "transcript", "academic record", "examination", "results",
+        "semester", "subject", "paper", "course", "credits", "gpa",
+        "percentage", "division", "class", "distinction"
+    ]
+    
+    text_lower = text.lower()
+    
+    # Check for certificate keywords
+    has_certificate_content = any(keyword in text_lower for keyword in certificate_keywords)
+    
+    # Check for mark sheet keywords  
+    has_marksheet_content = any(keyword in text_lower for keyword in mark_sheet_keywords)
+    
+    # Check for university/institution indicators
+    has_university_indicators = any(word in text_lower for word in ["university", "college", "institute", "school"])
+    
+    # Check for name and roll number patterns
+    has_name_pattern = bool(re.search(r"(?:name\s*[:\-]?\s*)([A-Z\s]{3,50})", text, re.IGNORECASE))
+    has_roll_pattern = bool(re.search(r"(?:roll\s*(?:no|number|no\.)\s*[:\-]?\s*)([A-Z0-9]{4,20})", text, re.IGNORECASE))
+    
+    # Validate certificate format
+    if has_certificate_content and has_university_indicators and has_name_pattern:
+        return True, "Valid certificate format detected"
+    
+    # Validate mark sheet format
+    if has_marksheet_content and has_university_indicators and (has_roll_pattern or has_name_pattern):
+        return True, "Valid mark sheet format detected"
+    
+    # If neither format is detected
+    if not has_certificate_content and not has_marksheet_content:
+        return False, "Please upload a valid certificate or mark sheet"
+    
+    if not has_university_indicators:
+        return False, "Document does not appear to be from an educational institution"
+    
+    if not has_name_pattern:
+        return False, "Document does not contain student name information"
+    
+    return False, "Please upload a valid certificate or mark sheet"
