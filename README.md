@@ -5,6 +5,8 @@
 
 TrueDegree combines **OCR + SHA-256 hashing + Ethereum smart contracts** to create an immutable, publicly verifiable registry of academic certificates.
 
+**Status**: ✅ Fully operational with all services running
+
 ---
 
 ## Architecture
